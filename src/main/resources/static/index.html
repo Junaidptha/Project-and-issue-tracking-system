@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Redirecting...</title>
+    <script>
+        // Redirect logic based on auth status
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.role === 'ADMIN') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/home.html';
+                }
+            } catch {
+                window.location.href = '/login.html';
+            }
+        } else {
+            window.location.href = '/login.html';
+        }
+    </script>
+</head>
+<body style="background-color: #0f172a; color: #f8fafc; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh;">
+    <p>Redirecting...</p>
+</body>
+</html>

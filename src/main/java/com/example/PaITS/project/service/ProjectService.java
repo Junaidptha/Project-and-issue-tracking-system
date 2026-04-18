@@ -24,4 +24,6 @@ public interface ProjectService {
     ProjectResponseDTO addMember(UUID projectId, UUID userId, User currentUser);
 
     ProjectResponseDTO removeMember(UUID projectId, UUID userId, User currentUser);
+
+    List<com.example.PaITS.user.dto.PublicUserResponse> getProjectMembers(UUID projectId, User currentUser);
 }

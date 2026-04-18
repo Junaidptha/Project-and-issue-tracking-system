@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        } else {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.role === 'ADMIN') window.location.href = '/admin.html';
+            } catch {
+                window.location.href = '/login.html';
+            }
+        }
+    </script>
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        @media (max-width: 800px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .dashboard-section {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        .dashboard-header h2 { margin: 0; font-size: 1.5rem; }
+
+        .minimal-project-card {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .minimal-project-card:hover { border-color: var(--primary-color); }
+
+        .p-key { font-weight: 600; font-family: monospace; font-size: 0.8rem; background: var(--surface-hover); padding: 0.2rem 0.5rem; border-radius: 4px; margin-right: 0.5rem; }
+        
+        .nav-btn {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            text-decoration: underline;
+        }
+        .nav-btn:hover { color: var(--primary-color); }
+
+        /* User search results */
+        .search-result {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            background: var(--bg-color);
+        }
+        .search-result-name { font-weight: 600; font-size: 0.9rem; }
+        .search-result-email { font-size: 0.8rem; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+    
+    <div class="container animate-fade-in" style="margin-top: 1rem;">
+        <div style="margin-bottom: 2rem;">
+            <h1 style="font-size: 2rem; margin-bottom: 0.25rem;" id="welcome-msg">Dashboard</h1>
+            <p style="margin: 0; color: var(--text-secondary);">Here is your overview for today.</p>
+        </div>
+        
+        <div class="dashboard-grid">
+            <!-- Left Column: Projects -->
+            <div class="dashboard-section">
+                <div class="dashboard-header">
+                    <h2>Recent Projects</h2>
+                    <a href="/projects.html" class="nav-btn">View All</a>
+                </div>
+                
+                <div id="projects-container">
+                    <p style="color:var(--text-secondary); font-size:0.9rem;">Loading projects...</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Member Search / Quick Links -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="dashboard-section">
+                    <div class="dashboard-header" style="border:none; padding:0; margin-bottom:1rem;">
+                        <h2 style="font-size:1.2rem;">Quick Actions</h2>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <a href="/projects.html" class="btn btn-primary btn-block">＋ New Project</a>
+                        <a href="/profile.html" class="btn btn-danger btn-block">My Settings</a>
+                    </div>
+                </div>
+
+                <div class="dashboard-section">
+                    <div class="dashboard-header" style="border:none; padding:0; margin-bottom:1rem;">
+                        <h2 style="font-size:1.2rem;">Find Members</h2>
+                    </div>
+                    <input type="text" id="member-search" placeholder="Type name or email..." oninput="debounceSearch()" style="margin-bottom: 1rem;">
+                    
+                    <div id="search-results">
+                        <p style="color:var(--text-secondary); font-size:0.8rem;">Search for colleagues to add them to your projects.</p>
+                    </div>
+                </div>
+            </div>
+    <script src="js/api.js"></script>
+    <script>
+        // Init 
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const profile = await UserAPI.getProfile();
+                document.getElementById('welcome-msg').textContent = `Welcome, ${profile.fullName || profile.username}`;
+                loadDashboardProjects();
+            } catch(e) {}
+        });
+
+        async function loadDashboardProjects() {
+            const container = document.getElementById('projects-container');
+            try {
+                const projects = await ProjectAPI.getAll();
+                
+                if (projects.length === 0) {
+                    container.innerHTML = `<p style="color:var(--text-secondary); font-size:0.9rem;">No active projects found. Create one to get started!</p>`;
+                    return;
+                }
+                
+                // Show up to 5 most recent
+                const topP = projects
+                    .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .slice(0, 5);
+
+                container.innerHTML = topP.map(p => `
+                    <div class="minimal-project-card" onclick="window.location.href='/projects.html'">
+                        <div>
+                            <span class="p-key">${escapeHtml(p.projectKey)}</span>
+                            <span style="font-weight:500;">${escapeHtml(p.name)}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-secondary);">
+                            ${p.isActive ? '<span style="color:#000;">● Active</span>' : '○ Inactive'}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                container.innerHTML = `<p style="color:red; font-size:0.9rem;">Failed to load projects.</p>`;
+            }
+        }
+
+        // Search logic
+        let searchTimeout;
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
+        }
+        
+        async function performSearch() {
+            const query = document.getElementById('member-search').value.trim();
+            const resultsContainer = document.getElementById('search-results');
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '<p style="color:var(--text-secondary); font-size:0.8rem;">Search for colleagues...</p>';
+                return;
+            }
+            
+            resultsContainer.innerHTML = '<p style="font-size:0.8rem;">Searching...</p>';
+            
+            try {
+                const users = await UserAPI.searchUsers(query);
+                if (users.length === 0) {
+                    resultsContainer.innerHTML = '<p style="font-size:0.8rem;">No members found.</p>';
+                    return;
+                }
+                
+                resultsContainer.innerHTML = users.map(u => `
+                    <div class="search-result" onclick="showProfile('${u.id}')" style="cursor:pointer;" onmouseover="this.style.borderColor='var(--primary-color)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                        <div class="search-result-name">${escapeHtml(u.fullName || u.username)}</div>
+                        <div class="search-result-email">${escapeHtml(u.email)}</div>
+                        <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.25rem;">ID: ${u.id}</div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                resultsContainer.innerHTML = '<p style="color:red; font-size:0.8rem;">Search failed.</p>';
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function showProfile(id) {
+            window.location.href = '/public-profile.html?id=' + id;
+        }
+    </script>
+</body>
+</html>

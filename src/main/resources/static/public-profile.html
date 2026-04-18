@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Public Profile</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+    </script>
+    <style>
+        body { background: var(--bg-color); }
+
+        .profile-shell {
+            max-width: 860px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            transition: color 0.15s;
+        }
+        .back-link:hover { color: var(--text-primary); }
+
+        /* Cover + Avatar */
+        .profile-cover {
+            height: 160px;
+            background: linear-gradient(135deg, #111 0%, #333 100%);
+            border-radius: 12px 12px 0 0;
+            border: 1px solid var(--border-color);
+            border-bottom: none;
+            position: relative;
+            /* NO overflow:hidden so avatar circle can bleed out the bottom */
+        }
+
+        .profile-avatar-wrap {
+            position: absolute;
+            bottom: -40px;
+            left: 2rem;
+            z-index: 10;
+        }
+
+        .profile-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 12px 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #222;
+            border: 3px solid var(--surface-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        .profile-meta {
+            padding: 3rem 2rem 1.5rem 2rem;
+        }
+
+        .profile-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin: 0 0 0.2rem 0;
+        }
+
+        .profile-handle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .profile-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.25rem 0.7rem;
+            border-radius: 20px;
+        }
+        .status-active { background: rgba(16,185,129,0.12); color: #10b981; }
+        .status-inactive { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+        .profile-bio {
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 560px;
+        }
+
+        /* Skills */
+        .section-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0 0 1rem 0;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .skills-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .skill-tag {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: border-color 0.15s;
+        }
+        .skill-tag:hover { border-color: var(--text-primary); }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; }
+        }
+
+        .info-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            margin-bottom: 1rem;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+
+        .info-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 0.95rem;
+        }
+
+        .uuid-badge {
+            background: var(--bg-color);
+            border: 1px dashed var(--border-color);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-family: monospace;
+            word-break: break-all;
+            color: var(--text-secondary);
+        }
+
+        .copy-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.15s;
+        }
+        .copy-btn:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* Skeleton */
+        .skeleton { background: var(--surface-color); animation: shimmer 1.5s infinite; border-radius: 6px; }
+        @keyframes shimmer {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="profile-shell">
+        <a href="javascript:history.back()" class="back-link animate-fade-in">← Back to results</a>
+
+        <div id="loading-state">
+            <div class="profile-card">
+                <div class="profile-cover" style="background: var(--surface-color);"></div>
+                <div class="profile-meta">
+                    <div class="skeleton" style="width: 80px; height: 80px; border-radius:50%; margin-bottom: 2rem;"></div>
+                    <div class="skeleton" style="width: 200px; height: 24px; margin-bottom: 0.5rem;"></div>
+                    <div class="skeleton" style="width: 140px; height: 16px; margin-bottom: 1rem;"></div>
+                    <div class="skeleton" style="width: 100%; height: 60px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="error-state" style="display:none; text-align:center; padding: 5rem 2rem;">
+            <div style="font-size:3rem; margin-bottom:1rem;">🔍</div>
+            <h2 style="margin-bottom:0.5rem;">User Not Found</h2>
+            <p style="color:var(--text-secondary);">This profile doesn't exist or has been deactivated.</p>
+            <a href="javascript:history.back()" class="btn btn-primary" style="margin-top:1.5rem; display:inline-block;">Go Back</a>
+        </div>
+
+        <div id="profile-content" style="display:none;">
+            <!-- Profile Header -->
+            <div class="animate-fade-in" style="margin-bottom:1.5rem;">
+                <div class="profile-cover">
+                    <div class="profile-avatar-wrap">
+                        <div class="profile-avatar" id="public-avatar">?</div>
+                    </div>
+                </div>
+                <div class="profile-card">
+                    <div class="profile-meta">
+                        <h1 class="profile-name" id="user-fullname"></h1>
+                        <p class="profile-handle" id="user-handle"></p>
+                        <div id="user-status"></div>
+                        <p class="profile-bio" id="user-bio"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills -->
+            <div class="section-card animate-fade-in" id="skills-section">
+                <h3 class="section-title">🛠️ Skills & Technologies</h3>
+                <div class="skills-grid" id="user-skills"></div>
+            </div>
+
+            <!-- Contact & Account Info -->
+            <div class="info-grid">
+                <div class="section-card animate-fade-in">
+                    <h3 class="section-title">📋 Account Details</h3>
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span class="info-value" id="user-email"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Username</span>
+                        <span class="info-value" id="user-username"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Account Status</span>
+                        <span class="info-value" id="user-status-detail"></span>
+                    </div>
+                </div>
+
+                <div class="section-card animate-fade-in">
+                    <h3 class="section-title">🔑 System ID</h3>
+                    <div class="info-row">
+                        <span class="info-label">User UUID</span>
+                        <div class="uuid-badge" id="user-uuid"></div>
+                        <button class="copy-btn" onclick="copyUUID()">📋 Copy UUID</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let profileUUID = '';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const userId = params.get('id');
+
+            if (!userId) {
+                show('error-state');
+                hide('loading-state');
+                return;
+            }
+
+            try {
+                const user = await UserAPI.getPublicUser(userId);
+                profileUUID = user.id;
+
+                hide('loading-state');
+                show('profile-content');
+
+                document.title = `PaITS | ${user.fullName || user.username}`;
+                document.getElementById('user-fullname').textContent = user.fullName || user.username;
+                document.getElementById('user-handle').textContent = '@' + user.username + '  ·  ' + user.email;
+
+                // Avatar initials
+                const name = user.fullName || user.username || '?';
+                const parts = name.trim().split(' ');
+                const initials = parts.length >= 2
+                    ? parts[0][0] + parts[parts.length - 1][0]
+                    : name.substring(0, 2);
+                document.getElementById('public-avatar').textContent = initials.toUpperCase();
+                document.getElementById('user-email').textContent = user.email;
+                document.getElementById('user-username').textContent = '@' + user.username;
+                document.getElementById('user-uuid').textContent = user.id;
+
+                // Status badge
+                const isActive = user.isActive;
+                document.getElementById('user-status').innerHTML = isActive
+                    ? '<span class="profile-status status-active">● Active</span>'
+                    : '<span class="profile-status status-inactive">● Inactive</span>';
+                document.getElementById('user-status-detail').innerHTML = isActive
+                    ? '<span style="color:#10b981; font-weight:600;">Active</span>'
+                    : '<span style="color:#ef4444; font-weight:600;">Inactive</span>';
+
+                // Bio
+                const bioEl = document.getElementById('user-bio');
+                if (user.bio && user.bio.trim().length > 0) {
+                    bioEl.textContent = user.bio;
+                } else {
+                    bioEl.textContent = 'This user has not added a bio yet.';
+                    bioEl.style.fontStyle = 'italic';
+                }
+
+                // Skills
+                const skillsEl = document.getElementById('user-skills');
+                const rawSkills = user.skills && user.skills.trim().length > 0 ? user.skills : null;
+                if (rawSkills) {
+                    const skillList = rawSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    skillsEl.innerHTML = skillList.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('');
+                } else {
+                    skillsEl.innerHTML = '<p style="color:var(--text-secondary); font-size:0.9rem; font-style:italic; margin:0;">No skills listed yet.</p>';
+                }
+
+            } catch (err) {
+                hide('loading-state');
+                show('error-state');
+            }
+        });
+
+        function show(id) { document.getElementById(id).style.display = 'block'; }
+        function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+        function copyUUID() {
+            navigator.clipboard.writeText(profileUUID).then(() => {
+                const btn = document.querySelector('.copy-btn');
+                btn.textContent = '✅ Copied!';
+                setTimeout(() => { btn.textContent = '📋 Copy UUID'; }, 2000);
+            });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

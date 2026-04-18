@@ -13,9 +13,10 @@ public interface UserRepository extends JpaRepository<User, UUID >{
 
     Optional<User> findByEmail(String email);
 
-    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE u.role = 'MEMBER' AND " +
+    @org.springframework.data.jpa.repository.Query("SELECT u FROM User u WHERE " +
             "(LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +
-            "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')))")
+            "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%')))")
     java.util.List<User> searchMembers(
             @org.springframework.data.repository.query.Param("query") String query,
             org.springframework.data.domain.Pageable pageable);

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        } else {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.role !== 'ADMIN') window.location.href = '/home.html';
+            } catch {
+                window.location.href = '/login.html';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="navbar-container"></div>
+    
+    <div class="container animate-fade-in" style="margin-top: 2rem;">
+        <div class="glass-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2>User Administration</h2>
+                <button class="btn btn-primary" onclick="loadUsers()">Refresh</button>
+            </div>
+            
+            <div id="admin-alert" class="alert"></div>
+            
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <input type="text" id="search-input" placeholder="Search users by name or id..." onkeyup="filterUsers()" style="width: 100%; max-width: 400px; padding: 0.5rem 1rem; border-radius: 8px;">
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>ID</th>
+                            <th>Active</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-tbody">
+                        <tr><td colspan="5" class="empty-state">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        let allUsers = [];
+
+        async function loadUsers() {
+            const tbody = document.getElementById('users-tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Loading users...</td></tr>';
+            
+            try {
+                allUsers = await UserAPI.getAllUsers();
+                renderTable(allUsers);
+            } catch (error) {
+                console.error(error);
+                UI.showAlert('admin-alert', error.message || 'Failed to load users. You might not have Admin privileges.', 'error');
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state" style="color: var(--error-color);">Failed to load data.</td></tr>';
+            }
+        }
+        
+        function renderTable(usersArray) {
+            const tbody = document.getElementById('users-tbody');
+            
+            if (usersArray.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No users found.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = usersArray.map(user => {
+                const role = user.role ? user.role.replace('ROLE_', '') : 'UNKNOWN';
+                const badgeClass = role.includes('ADMIN') ? 'badge-admin' : 'badge-user';
+                const activeBadgeClass = user.isActive ? 'badge-user' : 'alert-error';
+                const activeText = user.isActive ? 'Yes' : 'No';
+                
+                return `
+                    <tr>
+                        <td>${user.fullName || user.username}</td>
+                        <td><span style="font-size: 0.8em; color: var(--text-secondary);">${user.id}</span></td>
+                        <td><span class="badge ${activeBadgeClass}">${activeText}</span></td>
+                        <td><span class="badge ${badgeClass}">${role}</span></td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="deleteUser('${user.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function filterUsers() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allUsers.filter(user => {
+                const name = (user.fullName || user.username || '').toLowerCase();
+                const id = (user.id || '').toLowerCase();
+                return name.includes(query) || id.includes(query);
+            });
+            renderTable(filtered);
+        }
+        
+        async function deleteUser(id) {
+            if (confirm('Are you sure you want to delete this user?')) {
+                try {
+                    await UserAPI.deleteUser(id);
+                    UI.showAlert('admin-alert', 'User deleted successfully', 'success');
+                    loadUsers();
+                } catch (error) {
+                    UI.showAlert('admin-alert', error.message || 'Failed to delete user', 'error');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadUsers);
+    </script>
+</body>
+</html>

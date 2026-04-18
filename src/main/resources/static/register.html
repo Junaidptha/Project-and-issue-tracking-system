@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Register</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="navbar-container"></div>
+    
+    <div class="auth-container animate-fade-in">
+        <div class="glass-panel auth-card">
+            <h2 style="text-align: center; margin-bottom: 2rem;">Create Account</h2>
+            <div id="register-alert" class="alert"></div>
+            
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" required placeholder="John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required placeholder="johndoe">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required placeholder="john@example.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+
+
+                
+                <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+            </form>
+            
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.875rem;">
+                Already have an account? <a href="/login.html" style="color: var(--primary-color); text-decoration: none;">Sign In</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const originalText = btn.textContent;
+            
+            const userData = {
+                username: document.getElementById('username').value,
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+            
+            try {
+                btn.textContent = 'Loading...';
+                btn.disabled = true;
+                await UserAPI.register(userData);
+                
+                UI.showAlert('register-alert', 'Registration successful! Please login.', 'success');
+                setTimeout(() => {
+                    window.location.href = '/login.html';
+                }, 2000);
+                
+            } catch (error) {
+                UI.showAlert('register-alert', error.message || 'Registration failed', 'error');
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

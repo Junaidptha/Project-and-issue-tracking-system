@@ -6,7 +6,6 @@ import com.example.PaITS.project.entity.Project;
 import com.example.PaITS.project.repository.ProjectRepository;
 import com.example.PaITS.user.entity.User;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +22,25 @@ public class ProjectServiceImpl implements ProjectService {
     @Autowired
     private com.example.PaITS.issue.repository.IssueRepository issueRepository;
 
+    @Autowired
+    private com.example.PaITS.project.repository.ProjectMemberRepository projectMemberRepository;
+
+    @Autowired
+    private com.example.PaITS.user.repository.UserRepository userRepository;
+
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    @jakarta.annotation.PostConstruct
+    public void patchDatabaseSchema() {
+        try {
+            // Force the description column to TEXT so long descriptions work
+            jdbcTemplate.execute("ALTER TABLE projects ALTER COLUMN description TYPE TEXT");
+            jdbcTemplate.execute("ALTER TABLE issues ALTER COLUMN description TYPE TEXT");
+        } catch (Exception e) {
+            System.out.println("Schema patch skipped or already applied: " + e.getMessage());
+        }
+    }
 
     // ---- Helper: check if user is Admin ----
     private boolean isAdmin(User user) {
@@ -34,15 +52,15 @@ public class ProjectServiceImpl implements ProjectService {
         return project.getCreatedBy().equals(user.getId());
     }
 
-    // // ---- Helper: check if user is an assigned member ----
-    // private boolean isMember(Project project, User user) {
-    //     return project.getMembers().stream()
-    //             .anyMatch(m -> m.getId().equals(user.getId()));
-    // }
+    // ---- Helper: check if user is an assigned member ----
+    private boolean isMember(Project project, User user) {
+        return projectMemberRepository.findByProjectId(project.getId()).stream()
+                .anyMatch(pm -> pm.getUser().getId().equals(user.getId()));
+    }
 
     // ---- Helper: check if user has ANY access to this project ----
     private boolean hasAccess(Project project, User user) {
-        return isAdmin(user) || isLeader(project, user) /*isMember(project, user)*/;
+        return isAdmin(user) || isLeader(project, user) || isMember(project, user);
     }
 
     // ===================== CREATE =====================
@@ -144,17 +162,20 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        // SECURITY: Only Admin or Leader can add members
         if (!isAdmin(currentUser) && !isLeader(project, currentUser)) {
             throw new RuntimeException("Unauthorized: Only Admins and the Project Leader can add members.");
         }
 
-        // User newMember = userRepository.findById(userId)
-                // .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        User newMember = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
-        // project.getMembers().add(newMember);
-        Project saved = projectRepository.save(project);
-        return mapToDTO(saved);
+        if (projectMemberRepository.findByProjectIdAndUserId(projectId, userId).isEmpty()) {
+            com.example.PaITS.project.entity.ProjectMember pm = new com.example.PaITS.project.entity.ProjectMember(
+                    project, newMember, "CONTRIBUTOR");
+            projectMemberRepository.save(pm);
+        }
+
+        return mapToDTO(project);
     }
 
     @Override
@@ -163,17 +184,60 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        // SECURITY: Only Admin or Leader can remove members
         if (!isAdmin(currentUser) && !isLeader(project, currentUser)) {
             throw new RuntimeException("Unauthorized: Only Admins and the Project Leader can remove members.");
         }
 
-        // project.getMembers().removeIf(m -> m.getId().equals(userId));
-        Project saved = projectRepository.save(project);
-        return mapToDTO(saved);
+        projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+                .ifPresent(pm -> projectMemberRepository.delete(pm));
+
+        return mapToDTO(project);
     }
 
     // ===================== MAPPER =====================
+
+    @Override
+    public List<com.example.PaITS.user.dto.PublicUserResponse> getProjectMembers(UUID projectId, User currentUser) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Project not found"));
+
+        if (!hasAccess(project, currentUser)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        List<com.example.PaITS.user.dto.PublicUserResponse> members = projectMemberRepository.findByProjectId(projectId)
+                .stream()
+                .map(pm -> {
+                    User u = pm.getUser();
+                    return new com.example.PaITS.user.dto.PublicUserResponse(
+                            u.getId(),
+                            u.getUsername(),
+                            u.getEmail(),
+                            u.getFullName(),
+                            u.isActive(),
+                            u.getBio(),
+                            u.getSkills());
+                })
+                .collect(Collectors.toList());
+
+        // Ensure Project Creator is always included at the top of the list
+        boolean isCreatorIncluded = projectMemberRepository.findByProjectIdAndUserId(projectId, project.getCreatedBy())
+                .isPresent();
+        if (!isCreatorIncluded) {
+            userRepository.findById(project.getCreatedBy()).ifPresent(u -> {
+                members.add(0, new com.example.PaITS.user.dto.PublicUserResponse(
+                        u.getId(),
+                        u.getUsername(),
+                        u.getEmail(),
+                        u.getFullName(),
+                        u.isActive(),
+                        u.getBio(),
+                        u.getSkills()));
+            });
+        }
+
+        return members;
+    }
 
     private ProjectResponseDTO mapToDTO(Project project) {
         ProjectResponseDTO dto = new ProjectResponseDTO();
@@ -188,5 +252,3 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
 }
-
-    

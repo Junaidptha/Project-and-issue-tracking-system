@@ -154,7 +154,9 @@ public class UserService {
                 user.getUsername(),
                 user.getEmail(),
                 user.getFullName(),
-                user.isActive()
+                user.isActive(),
+                user.getBio(),
+                user.getSkills()
         );
     }
 
@@ -169,7 +171,9 @@ public class UserService {
                         user.getUsername(),
                         user.getEmail(),
                         user.getFullName(),
-                        user.isActive()
+                        user.isActive(),
+                        user.getBio(),
+                        user.getSkills()
                 ))
                 .toList();
     }

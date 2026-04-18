@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaITS | Projects</title>
+    <meta name="description" content="Manage your projects in PaITS – create, view, and collaborate.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        // Route guard
+        const token = localStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+    </script>
+    <style>
+        /* ===== Projects Page Styles ===== */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            margin-bottom: 0;
+        }
+
+        /* Project Cards Grid */
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .project-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.25s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-color);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .project-card:hover::before {
+            opacity: 1;
+        }
+
+        .project-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .project-key-badge {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            font-family: monospace;
+        }
+
+        .project-name {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0.5rem 0 0.5rem;
+        }
+
+        .project-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .project-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .project-meta {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .project-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-ghost:hover {
+            background: var(--surface-hover);
+            color: var(--text-primary);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--surface-color);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 520px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: translateY(20px);
+            transition: transform 0.25s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0.25rem;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        /* Detail Panel */
+        .detail-panel {
+            display: none;
+            margin-top: 2rem;
+        }
+
+        .detail-panel.visible {
+            display: block;
+        }
+
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+        }
+
+        /* Tabs Styles */
+        .tabs-header {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 0;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Issue Items */
+        .issue-card {
+            background: var(--surface-hover);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .issue-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-primary);
+        }
+
+        .issue-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .badge-status {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+
+        .badge-TODO { background: var(--surface-color); color: var(--text-secondary); }
+        .badge-IN_PROGRESS { background: var(--surface-hover); color: var(--text-primary); }
+        .badge-DONE { background: var(--text-primary); color: var(--bg-color); }
+
+        /* Chat Styles */
+        .chat-section {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--surface-color);
+            overflow: hidden;
+            height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chat-message {
+            max-width: 80%;
+            padding: 0.75rem;
+            border-radius: 8px;
+            background: var(--surface-hover);
+            align-self: flex-start;
+        }
+
+        .chat-message.me {
+            background: var(--surface-color);
+            align-self: flex-end;
+            border: 1px solid var(--primary-color);
+        }
+
+        .chat-message-sender {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .chat-message.me .chat-message-sender {
+            color: var(--text-primary);
+            text-align: right;
+        }
+
+        .chat-message-content {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        /* Loaders */
+        .skeleton {
+            background: var(--surface-hover);
+            animation: pulse 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 0.3; } 100% { opacity: 0.6; } }
+
+        .skeleton-card { height: 180px; border-radius: 8px; }
+        
+        .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+        .status-active { background: #000; }
+        .status-inactive { background: transparent; border: 1px solid #000; }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <div class="container animate-fade-in" style="margin-top: 1rem; padding-bottom: 4rem;">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div>
+                <h1>Projects</h1>
+                <p style="margin-bottom:0; margin-top: 0.25rem;">Create and manage your team projects</p>
+            </div>
+            <button class="btn btn-primary" id="new-project-btn" onclick="openCreateModal()">
+                ＋ New Project
+            </button>
+        </div>
+
+        <div id="alert-msg" class="alert"></div>
+
+        <!-- Projects Grid -->
+        <div id="projects-container">
+            <div class="projects-grid" id="skeleton-grid">
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+                <div class="skeleton skeleton-card"></div>
+            </div>
+        </div>
+
+        <!-- Project Detail Panel -->
+        <div id="detail-panel" class="detail-panel glass-panel">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem;">
+                <div>
+                    <span class="project-key-badge" id="dt-project-key"></span>
+                    <strong style="font-size:1.5rem; display:block; margin-top:0.5rem;" id="dt-project-name"></strong>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="closeProjectDetail()">✕ Close Panel</button>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="tabs-header">
+                <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+                <button class="tab-btn" onclick="switchTab('roadmap')">Roadmap</button>
+                <button class="tab-btn" onclick="switchTab('issues')">Issues</button>
+                <button class="tab-btn" onclick="switchTab('members')">Members</button>
+                <button class="tab-btn" onclick="switchTab('chat')">Chat</button>
+            </div>
+
+            <!-- Tab: Overview -->
+            <div id="tab-overview" class="tab-content active">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:0.5rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-hover);">
+                    <div>
+                        <h4 style="margin:0; font-size:1.1rem;">AI Project Assistance</h4>
+                        <p style="margin:0.25rem 0 0 0; font-size:0.85rem; color:var(--text-secondary);">Automate your initial project sprint planning.</p>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" id="btn-generate-roadmap" onclick="generateRoadmap()">✨ Auto-Generate Roadmap</button>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value" id="dt-project-desc"></div>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="detail-section">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value" id="dt-project-status"></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-label">Created At</div>
+                        <div class="detail-value" id="dt-project-created"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab: Roadmap (AI Generated) -->
+            <div id="tab-roadmap" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h3 style="margin:0">AI Generated Roadmap</h3>
+                </div>
+                <div id="roadmap-list">
+                    <div style="text-align:center; padding: 2rem; color: var(--text-secondary);">Loading roadmap...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Issues -->
+            <div id="tab-issues" class="tab-content">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+                    <h3 style="margin:0">Issue Tracking</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openIssueModal()">＋ Create Issue</button>
+                </div>
+                <div id="issues-list">
+                    <div style="text-align:center; padding: 2rem; color: var(--text-secondary);">Loading issues...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Members -->
+            <div id="tab-members" class="tab-content">
+                <h3 style="margin-bottom:1rem; margin-top:0;">Manage Access</h3>
+                <div class="detail-section">
+                    <div class="detail-label">Add Member by User ID</div>
+                    <div style="display:flex; gap:0.5rem; max-width:400px; margin-top:0.5rem;">
+                        <input type="text" id="add-member-input" placeholder="Paste User UUID here…" style="flex:1; padding:0.5rem; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-color); color:white;">
+                        <button class="btn btn-primary btn-sm" onclick="addMember()">Add</button>
+                    </div>
+                </div>
+                <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom: 2rem;">Only Admins and Project Leaders can add members.</p>
+                <h4 style="margin-bottom:1rem;">Current Members</h4>
+                <div id="members-list">
+                    <div style="text-align:center; padding: 2rem; color: var(--text-secondary);">Loading members...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Chat -->
+            <div id="tab-chat" class="tab-content">
+                <div class="chat-section">
+                    <div class="chat-messages" id="chat-messages">
+                        <div style="font-size:0.8rem; color:var(--text-secondary); text-align:center;">Loading messages...</div>
+                    </div>
+                    <form class="chat-input-area" id="chat-form" onsubmit="sendChatMessage(event)">
+                        <input type="text" id="chat-input" placeholder="Type a message..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" id="chat-submit-btn">Send</button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Create / Edit Project Modal -->
+    <div class="modal-overlay" id="project-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">New Project</h3>
+                <button class="modal-close" onclick="closeModal('project-modal')">×</button>
+            </div>
+            <div id="modal-alert" class="alert"></div>
+            <form id="project-form" onsubmit="submitProjectForm(event)">
+                <input type="hidden" id="edit-project-id">
+                <div class="form-group">
+                    <label>Project Name *</label>
+                    <input type="text" id="proj-name" placeholder="e.g. Mobile App Redesign" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Key *</label>
+                    <input type="text" id="proj-key" placeholder="e.g. MAR" maxlength="10" oninput="this.value = this.value.toUpperCase()" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="proj-desc" rows="3" placeholder="What is this project about?"></textarea>
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.5rem;">
+                    <input type="checkbox" id="proj-active" checked style="width:auto; cursor:pointer;">
+                    <label for="proj-active" style="margin-bottom:0; cursor:pointer;">Active project</label>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('project-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-btn">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Create / Edit Issue Modal -->
+    <div class="modal-overlay" id="issue-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="issue-modal-title">New Issue</h3>
+                <button class="modal-close" onclick="closeModal('issue-modal')">×</button>
+            </div>
+            <form id="issue-form" onsubmit="submitIssueForm(event)">
+                <div class="form-group">
+                    <label>Title *</label>
+                    <input type="text" id="issue-title" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="issue-type" style="width:100%; padding:0.5rem; background:var(--bg-color); color:white; border:1px solid var(--border-color); border-radius:6px;">
+                        <option value="TASK">Task</option>
+                        <option value="BUG">Bug</option>
+                        <option value="IMPROVEMENT">Improvement</option>
+                        <option value="STORY">Story</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select id="issue-priority" style="width:100%; padding:0.5rem; background:var(--bg-color); color:white; border:1px solid var(--border-color); border-radius:6px;">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="CRITICAL">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="issue-desc" rows="3"></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:1.5rem;">
+                    <button type="button" class="btn btn-ghost" onclick="closeModal('issue-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="issue-submit-btn">Save Issue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        // ========== State ==========
+        let allProjects = [];
+        let currentUserId = null;
+        let currentUserRole = null;
+        
+        let currentActiveProjectId = null;
+        let chatInterval = null;
+
+        // ========== Init ==========
+        async function init() {
+            try {
+                const profile = await UserAPI.getProfile();
+                currentUserId = profile.id;
+                currentUserRole = profile.role;
+            } catch (e) {
+                // fail silently, role checks will use token
+            }
+            await loadProjects();
+        }
+
+        // ========== Load Projects ==========
+        async function loadProjects() {
+            const container = document.getElementById('projects-container');
+            try {
+                allProjects = await ProjectAPI.getAll();
+                
+                if (allProjects.length === 0) {
+                    container.innerHTML = `
+                        <div class="glass-panel empty-state">
+                            <div style="font-size:3rem; margin-bottom:1rem">📂</div>
+                            <h3>No Projects Yet</h3>
+                            <p>Click <strong>New Project</strong> to create your first one.</p>
+                        </div>`;
+                    return;
+                }
+
+                const cards = allProjects.map(p => {
+                    const isLeader = currentUserId && p.createdBy === currentUserId;
+                    const canEdit = isLeader || currentUserRole === 'ADMIN';
+                    const statusDot = p.isActive ? `<span class="status-dot status-active"></span>Active` : `<span class="status-dot status-inactive"></span>Inactive`;
+                    return `
+                        <div class="project-card" onclick="viewProject('${p.id}')">
+                            <div class="project-card-header">
+                                <span class="project-key-badge">${escapeHtml(p.projectKey)}</span>
+                                <span style="font-size:0.78rem; color:var(--text-secondary);">${statusDot}</span>
+                            </div>
+                            <div class="project-name">${escapeHtml(p.name)}</div>
+                            <div class="project-description">${escapeHtml(p.description || 'No description.')}</div>
+                            <div class="project-footer">
+                                <span class="project-meta">📅 ${p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—'}</span>
+                                <div class="project-actions">
+                                    ${canEdit ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); openEditModal('${p.id}')">Edit</button>` : ''}
+                                    ${canEdit ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteProject('${p.id}', '${escapeHtml(p.name)}')">Delete</button>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                }).join('');
+                
+                container.innerHTML = `<div class="projects-grid">${cards}</div>`;
+            } catch (err) {
+                container.innerHTML = `<div class="glass-panel empty-state"><h3>Failed to load projects</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        // ========== View Project Detail ==========
+        async function viewProject(id) {
+            currentActiveProjectId = id;
+            const p = allProjects.find(x => x.id === id);
+            if (!p) return;
+
+            document.getElementById('dt-project-key').textContent = p.projectKey;
+            document.getElementById('dt-project-name').textContent = p.name;
+            document.getElementById('dt-project-desc').textContent = p.description || 'No description available.';
+            document.getElementById('dt-project-status').innerHTML = p.isActive ? `<span class="badge badge-status badge-DONE">Active</span>` : `<span class="badge badge-status badge-TODO">Inactive</span>`;
+            document.getElementById('dt-project-created').textContent = p.createdAt ? new Date(p.createdAt).toLocaleString() : '—';
+            
+            document.getElementById('detail-panel').classList.add('visible');
+            document.getElementById('detail-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            switchTab('overview'); // Default tab
+        }
+
+        function closeProjectDetail() {
+            document.getElementById('detail-panel').classList.remove('visible');
+            stopChat();
+            currentActiveProjectId = null;
+        }
+
+        // ========== Tabs Management ==========
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            if (tabId === 'issues') loadIssues();
+            if (tabId === 'roadmap') loadRoadmap();
+            if (tabId === 'members') loadMembers();
+            if (tabId === 'chat') startChat();
+            else stopChat();
+        }
+
+        // ========== Issues Implementation ==========
+        async function loadIssues() {
+            const listElement = document.getElementById('issues-list');
+            listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">Loading...</div>`;
+            
+            try {
+                let issues = await IssueAPI.getByProject(currentActiveProjectId);
+                
+                if (issues.length === 0) {
+                    listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">No issues created yet.</div>`;
+                    return;
+                }
+
+                listElement.innerHTML = issues.map(issue => `
+                    <div class="issue-card">
+                        <div>
+                            <div class="issue-title">[${issue.issueKey}] ${escapeHtml(issue.title)}</div>
+                            <div class="issue-meta">
+                                <span class="badge-status badge-${issue.status}">${issue.status.replace('_', ' ')}</span>
+                                <span>Type: ${issue.issueType}</span>
+                                <span>Priority: ${issue.priority}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <select 
+                                onchange="updateIssueStatus('${issue.id}', this.value)" 
+                                style="background:var(--bg-color); color:var(--text-primary); border:1px solid var(--border-color); padding:0.4rem; border-radius:6px; cursor:pointer;"
+                            >
+                                <option value="OPEN" ${issue.status === 'OPEN' ? 'selected' : ''}>Open</option>
+                                <option value="IN_PROGRESS" ${issue.status === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+                                <option value="DONE" ${issue.status === 'DONE' ? 'selected' : ''}>Done</option>
+                            </select>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                listElement.innerHTML = `<div style="color:var(--error-color);">Error fetching issues: ${err.message}</div>`;
+            }
+        }
+
+        function openIssueModal() {
+            document.getElementById('issue-form').reset();
+            document.getElementById('issue-modal').classList.add('active');
+        }
+
+        async function submitIssueForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('issue-submit-btn');
+            btn.disabled = true;
+
+            const payload = {
+                title: document.getElementById('issue-title').value.trim(),
+                description: document.getElementById('issue-desc').value.trim(),
+                issueType: document.getElementById('issue-type').value,
+                priority: document.getElementById('issue-priority').value
+            };
+
+            try {
+                await IssueAPI.create(currentActiveProjectId, payload);
+                closeModal('issue-modal');
+                showAlert('alert-msg', 'Issue created!', 'success');
+                loadIssues();
+            } catch (err) {
+                showAlert('alert-msg', 'Error creating issue: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function updateIssueStatus(issueId, newStatus) {
+            try {
+                await IssueAPI.updateStatus(currentActiveProjectId, issueId, newStatus);
+                showAlert('alert-msg', 'Status updated', 'success');
+            } catch (err) {
+                showAlert('alert-msg', 'Error updating status: ' + err.message, 'error');
+                loadIssues(); 
+            }
+        }
+
+        async function updateRoadmapItemStatus(itemId, newStatus) {
+            try {
+                await RoadmapAPI.updateStatus(currentActiveProjectId, itemId, newStatus);
+                showAlert('alert-msg', 'Roadmap item updated', 'success');
+            } catch (err) {
+                showAlert('alert-msg', 'Error updating roadmap item: ' + err.message, 'error');
+                loadRoadmap(); 
+            }
+        }
+
+        async function loadRoadmap() {
+            const listElement = document.getElementById('roadmap-list');
+            listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">Loading roadmap...</div>`;
+            
+            try {
+                let items = await RoadmapAPI.getRoadmap(currentActiveProjectId);
+                
+                if (items.length === 0) {
+                    listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">No roadmap generated yet. Generate one from the Overview tab!</div>`;
+                    return;
+                }
+
+                listElement.innerHTML = items.map(item => `
+                    <div class="issue-card" style="border-left: 4px solid var(--accent-light);">
+                        <div>
+                            <div class="issue-title">${escapeHtml(item.title)}</div>
+                            <div class="issue-meta" style="margin-top:0.5rem; white-space:pre-wrap; font-size:0.9rem; color:var(--text-secondary);">${escapeHtml(item.description)}</div>
+                            <div class="issue-meta" style="margin-top:1rem;">
+                                <span class="badge-status badge-${item.status}">${item.status.replace('_', ' ')}</span>
+                                <span>Type: ${item.issueType}</span>
+                                <span>Priority: ${item.priority}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <select 
+                                onchange="updateRoadmapItemStatus('${item.id}', this.value)" 
+                                style="background:var(--bg-color); color:var(--text-primary); border:1px solid var(--border-color); padding:0.4rem; border-radius:6px; cursor:pointer;"
+                            >
+                                <option value="OPEN" ${item.status === 'OPEN' ? 'selected' : ''}>Open</option>
+                                <option value="IN_PROGRESS" ${item.status === 'IN_PROGRESS' ? 'selected' : ''}>In Progress</option>
+                                <option value="DONE" ${item.status === 'DONE' ? 'selected' : ''}>Done</option>
+                            </select>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:#ef4444;">Error loading roadmap: ${err.message}</div>`;
+            }
+        }
+
+        async function generateRoadmap() {
+            const btn = document.getElementById('btn-generate-roadmap');
+            const listElement = document.getElementById('issues-list');
+            
+            if(!confirm("Use AI to automatically create a roadmap of tasks for this project?")) return;
+            
+            btn.disabled = true;
+            btn.textContent = "✨ Generating... please wait.";
+            listElement.innerHTML = `<div style="text-align:center; padding:2rem;"><div class="skeleton skeleton-card" style="height:60px; margin-bottom:1rem;"></div><div class="skeleton skeleton-card" style="height:60px; margin-bottom:1rem;"></div><p style="color:var(--text-secondary);">The Gemini AI is analyzing your project and writing a roadmap...</p></div>`;
+            
+            try {
+                await ProjectAPI.generateRoadmap(currentActiveProjectId);
+                showAlert('alert-msg', 'Roadmap generated successfully! Check the Issues tab.', 'success');
+            } catch (err) {
+                showAlert('alert-msg', 'Error generating roadmap: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "✨ Auto-Generate Roadmap";
+                if(document.getElementById('tab-roadmap').classList.contains('active')) loadRoadmap();
+                if(document.getElementById('tab-issues').classList.contains('active')) loadIssues();
+            }
+        }
+
+        // ========== Members Implementation ==========
+        async function loadMembers() {
+            const listElement = document.getElementById('members-list');
+            listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">Loading...</div>`;
+            
+            try {
+                const currentProject = allProjects.find(p => p.id === currentActiveProjectId);
+                const creatorId = currentProject ? currentProject.createdBy : null;
+
+                const members = await ProjectAPI.getMembers(currentActiveProjectId);
+                if (members.length === 0) {
+                    listElement.innerHTML = `<div style="text-align:center; padding:1rem; color:var(--text-secondary);">No members found.</div>`;
+                    return;
+                }
+
+                listElement.innerHTML = members.map(m => {
+                    // Extract initials
+                    const name = m.fullName || m.username || '?';
+                    const parts = name.trim().split(' ');
+                    const initials = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : name.substring(0, 2);
+
+                    const isLeader = m.id === creatorId;
+                    
+                    return `
+                    <div style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 0.5rem; background: var(--bg-color); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display:flex; align-items:center; gap:0.75rem;">
+                            <div style="width:36px; height:36px; border-radius:50%; background:#222; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:600; text-transform:uppercase;">
+                                ${escapeHtml(initials)}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; display:flex; align-items:center; gap:0.5rem;">
+                                    ${escapeHtml(m.fullName || m.username)}
+                                    ${isLeader ? '<span style="background:var(--text-primary); color:var(--bg-color); padding:0.15rem 0.5rem; border-radius:12px; font-size:0.65rem; font-weight:700; letter-spacing:0.05em;">LEADER</span>' : ''}
+                                </div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHtml(m.email)}</div>
+                            </div>
+                        </div>
+                        ${isLeader ? '<span style="font-size:0.8rem; color:var(--text-secondary); font-style:italic; padding-right:0.5rem;">Creator</span>' : `<button class="btn btn-danger btn-sm" onclick="removeMember('${m.id}')">Remove</button>`}
+                    </div>
+                `}).join('');
+            } catch (err) {
+                listElement.innerHTML = `<div style="color:var(--error-color);">Error fetching members: ${err.message}</div>`;
+            }
+        }
+
+        async function removeMember(userId) {
+            if (!confirm('Are you sure you want to remove this member?')) return;
+            try {
+                await ProjectAPI.removeMember(currentActiveProjectId, userId);
+                showAlert('alert-msg', 'Member removed.', 'success');
+                loadMembers();
+            } catch (err) {
+                showAlert('alert-msg', 'Failed to remove member: ' + err.message, 'error');
+            }
+        }
+
+        // ========== Chat Implementation ==========
+        function startChat() {
+            if (chatInterval) stopChat();
+            loadMessages();
+            chatInterval = setInterval(() => loadMessages(true), 3000);
+        }
+
+        function stopChat() {
+            if (chatInterval) {
+                clearInterval(chatInterval);
+                chatInterval = null;
+            }
+        }
+
+        async function loadMessages(isPolling = false) {
+            if (!currentActiveProjectId) return;
+            try {
+                const messages = await ProjectAPI.getMessages(currentActiveProjectId);
+                const container = document.getElementById('chat-messages');
+                
+                if (messages.length === 0) {
+                    if (!isPolling) container.innerHTML = `<div style="font-size:0.8rem; color:var(--text-secondary); text-align:center;">No messages yet.</div>`;
+                    return;
+                }
+                
+                let html = '';
+                messages.forEach(m => {
+                    const isMe = m.senderId === currentUserId;
+                    const timeString = new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    html += `
+                        <div class="chat-message ${isMe ? 'me' : ''}">
+                            <div class="chat-message-sender">${isMe ? 'You' : escapeHtml(m.senderName)}</div>
+                            <div class="chat-message-content">${escapeHtml(m.content)}</div>
+                            <div class="chat-message-time">${timeString}</div>
+                        </div>`;
+                });
+                
+                if (container.innerHTML !== html) {
+                    container.innerHTML = html;
+                    container.scrollTop = container.scrollHeight;
+                }
+            } catch (err) { console.error("Chat error:", err); }
+        }
+
+        async function sendChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const content = input.value.trim();
+            if (!content) return;
+            
+            input.disabled = true;
+            try {
+                await ProjectAPI.sendMessage(currentActiveProjectId, content);
+                input.value = '';
+                await loadMessages();
+            } catch (err) {
+                showAlert('alert-msg', 'Failed to send message: ' + err.message, 'error');
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+
+        // ========== Core Members Management ==========
+        async function addMember() {
+            const input = document.getElementById('add-member-input');
+            const userId = input.value.trim();
+            if (!userId) return;
+            try {
+                await ProjectAPI.addMember(currentActiveProjectId, userId);
+                showAlert('alert-msg', 'Member added successfully!', 'success');
+                input.value = '';
+                loadMembers();
+            } catch (err) {
+                showAlert('alert-msg', 'Failed to add member: ' + err.message, 'error');
+            }
+        }
+
+        // ========== Core Project Methods ==========
+        function openCreateModal() {
+            document.getElementById('modal-title').textContent = 'New Project';
+            document.getElementById('project-form').reset();
+            document.getElementById('edit-project-id').value = '';
+            document.getElementById('project-modal').classList.add('active');
+        }
+
+        function openEditModal(id) {
+            const p = allProjects.find(x => x.id === id);
+            document.getElementById('modal-title').textContent = 'Edit Project';
+            document.getElementById('edit-project-id').value = id;
+            document.getElementById('proj-name').value = p.name;
+            document.getElementById('proj-key').value = p.projectKey;
+            document.getElementById('proj-desc').value = p.description || '';
+            document.getElementById('proj-active').checked = p.isActive;
+            document.getElementById('project-modal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        async function submitProjectForm(e) {
+            e.preventDefault();
+            const editId = document.getElementById('edit-project-id').value;
+            const payload = {
+                name: document.getElementById('proj-name').value.trim(),
+                projectKey: document.getElementById('proj-key').value.trim(),
+                description: document.getElementById('proj-desc').value.trim(),
+                isActive: document.getElementById('proj-active').checked
+            };
+
+            try {
+                if (editId) await ProjectAPI.update(editId, payload);
+                else await ProjectAPI.create(payload);
+                closeModal('project-modal');
+                showAlert('alert-msg', 'Project saved!', 'success');
+                loadProjects();
+            } catch (err) { showAlert('alert-msg', err.message, 'error'); }
+        }
+
+        async function deleteProject(id, name) {
+            if (!confirm(`Delete project "${name}"?`)) return;
+            try {
+                await ProjectAPI.delete(id);
+                showAlert('alert-msg', 'Project deleted.', 'success');
+                if (currentActiveProjectId === id) closeProjectDetail();
+                loadProjects();
+            } catch (err) { showAlert('alert-msg', err.message, 'error'); }
+        }
+
+        // ========== Utils ==========
+        function showAlert(id, msg, type = 'error') {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = msg;
+            el.className = `alert alert-${type}`;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Modals close on background click
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+            el.addEventListener('click', function(e) { if(e.target === this) this.classList.remove('active'); });
+        });
+
+        // Boot
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

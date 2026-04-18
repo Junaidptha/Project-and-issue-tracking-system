@@ -104,4 +104,49 @@ public class ProjectController {
         ProjectResponseDTO updated = projectService.removeMember(id, userId, currentUser);
         return ResponseEntity.ok(updated);
     }
+
+    @GetMapping("/{id}/members")
+    public ResponseEntity<List<com.example.PaITS.user.dto.PublicUserResponse>> getProjectMembers(
+            @PathVariable UUID id,
+            Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
+        return ResponseEntity.ok(projectService.getProjectMembers(id, currentUser));
+    }
+
+    @Autowired
+    private com.example.PaITS.project.service.RoadmapService roadmapService;
+
+    @PostMapping("/{id}/generate-roadmap")
+    public ResponseEntity<?> generateRoadmap(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        
+        User currentUser = getCurrentUser(authentication);
+        try {
+            roadmapService.generateRoadmapForProject(id, currentUser.getId());
+            return ResponseEntity.ok().body("{\"message\": \"Roadmap generated successfully\"}");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
+    }
+
+    @GetMapping("/{id}/roadmap")
+    public ResponseEntity<List<com.example.PaITS.project.dto.RoadmapItemDTO>> getRoadmap(
+            @PathVariable UUID id,
+            Authentication authentication) {
+        // Assume user authorization is implicitly checked in front of the project or we assume they have access to the project
+        return ResponseEntity.ok(roadmapService.getRoadmapForProject(id));
+    }
+
+    @PutMapping("/{id}/roadmap/{itemId}")
+    public ResponseEntity<com.example.PaITS.project.dto.RoadmapItemDTO> updateRoadmapItemStatus(
+            @PathVariable UUID id,
+            @PathVariable UUID itemId,
+            @RequestBody java.util.Map<String, String> body,
+            Authentication authentication) {
+        
+        com.example.PaITS.issue.entity.IssueStatus status = com.example.PaITS.issue.entity.IssueStatus.valueOf(body.get("status"));
+        return ResponseEntity.ok(roadmapService.updateRoadmapItemStatus(itemId, status));
+    }
 }

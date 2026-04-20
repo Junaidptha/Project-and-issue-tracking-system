@@ -39,7 +39,7 @@ public class RoadmapService {
     @Autowired
     private RoadmapItemRepository roadmapItemRepository;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=";
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=";
 
     public void generateRoadmapForProject(UUID projectId, UUID creatorId) {
         Project project = projectRepository.findById(projectId)
@@ -94,7 +94,7 @@ public class RoadmapService {
             JsonNode rootNode = mapper.readTree(response.getBody());
             String rawJsonResponse = rootNode.path("candidates").get(0).path("content").path("parts").get(0).path("text").textValue();
             if (rawJsonResponse == null) rawJsonResponse = "";
-            
+             
             rawJsonResponse = rawJsonResponse.replaceAll("^```json\\s*", "");
             rawJsonResponse = rawJsonResponse.replaceAll("\\s*```$", "");
             rawJsonResponse = rawJsonResponse.trim();

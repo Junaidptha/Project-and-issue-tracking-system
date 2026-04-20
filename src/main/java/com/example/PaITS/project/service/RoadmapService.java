@@ -39,7 +39,7 @@ public class RoadmapService {
     @Autowired
     private RoadmapItemRepository roadmapItemRepository;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=";
 
     public void generateRoadmapForProject(UUID projectId, UUID creatorId) {
         Project project = projectRepository.findById(projectId)
